@@ -960,8 +960,8 @@
       { name: "Alubias", emoji: "🫘" },
       { name: "Tofu", emoji: "🌱" },
       { name: "Yogur griego natural", emoji: "🥛" },
-      { name: "Queso fresco", emoji: "🧀" },
-      { name: "Huevos", emoji: "🥚" }
+	  { name: "Huevos", emoji: "🥚" },
+      { name: "Queso fresco", emoji: "🧀" }
     ],
 
     hidratos: [
@@ -1151,8 +1151,9 @@
 
   function loadData() {
 
-    const savedFoods =
-      localStorage.getItem("mealPlannerFoods");
+    // La lista de alimentos del HTML (defaultFoods) es la fuente de verdad.
+    // No cargamos mealPlannerFoods desde localStorage porque impediría que
+    // los cambios publicados en GitHub se reflejen en otros dispositivos.
 
     const savedSelections =
       localStorage.getItem("mealPlannerSelections");
@@ -1161,27 +1162,10 @@
       localStorage.getItem("mealPlannerPlan");
 
 
-    if (savedFoods) {
-
-      try {
-
-        foods = JSON.parse(savedFoods);
-
-      }
-
-      catch (error) {
-
-        foods = createDefaultFoods();
-
-      }
-
-    }
-
-    else {
-
-      foods = createDefaultFoods();
-
-    }
+    // IMPORTANTE: siempre partimos de la lista que está en este HTML.
+    // Así, cuando cambies defaultFoods y publiques una nueva versión
+    // en GitHub Pages, la nueva lista sustituirá a la antigua.
+    foods = createDefaultFoods();
 
 
     if (savedSelections) {
@@ -1263,20 +1247,36 @@
 
 
     /*
-      Limpiamos de la selección alimentos
-      que ya no existan.
+      Sincronización con la lista actual del HTML.
+
+      Si cambias el nombre o eliminas un alimento en defaultFoods,
+      quitamos también ese alimento de las selecciones y del plan.
+      Los alimentos nuevos aparecerán automáticamente.
     */
+
+    const allCurrentFoodNames = new Set();
 
     categories.forEach(category => {
 
       const validNames =
         foods[category.key].map(food => food.name);
 
+      validNames.forEach(name => allCurrentFoodNames.add(name));
+
       selected[category.key] =
         selected[category.key].filter(name =>
           validNames.includes(name)
         );
 
+    });
+
+    days.forEach(day => {
+      meals.forEach(meal => {
+        weeklyPlan[day.name][meal] =
+          weeklyPlan[day.name][meal].filter(food =>
+            allCurrentFoodNames.has(food)
+          );
+      });
     });
 
 
@@ -1293,11 +1293,6 @@
      ========================================================= */
 
   function saveData() {
-
-    localStorage.setItem(
-      "mealPlannerFoods",
-      JSON.stringify(foods)
-    );
 
     localStorage.setItem(
       "mealPlannerSelections",
